@@ -15,8 +15,9 @@
 //         "messageHandlerTimeout": 45000,   // optional: in ms, if not answer in time an error is provided to get methods
 //         "resendPacketDelay": 150,         // optional: delay between packages if light did not receive a packet (for setting methods with callback)
 //         "resendMaxTimes": 3,              // optional: resend packages x times if light did not receive a packet (for setting methods with callback)
-//         "debug": false,                    // optional: logs all messages in console if turned on
-//         "address": '0.0.0.0'              // optional: specify which ipv4 address to bind to
+//         "debug": false,                   // optional: logs all messages in console if turned on
+//         "address": '0.0.0.0',             // optional: specify which ipv4 address to bind to
+//         "serials": []                     // optional: specify serial numbers to add; ignore everything else
 //     }
 // ],
 //
@@ -29,7 +30,9 @@ const LifxConstants = require('node-lifx').constants;
 var Client = new LifxClient();
 var Characteristic, Kelvin, PlatformAccessory, Service, UUIDGen;
 
-var fadeDuration;
+var fadeDuration,
+    serialNumbers,
+    useAllSerials;
 
 const UUID_KELVIN = 'C4E24248-04AC-44AF-ACFF-40164E829DBA';
 
@@ -66,12 +69,16 @@ class LifxLanPlatform {
         this.config = config || {};
 
         fadeDuration = this.config.duration || 1000;
+        serialNumbers = this.config.serials || null;
+        useAllSerials = (serialNumbers === null || serialNumbers.length < 1) ? true : false;
 
         this.api = api;
         this.accessories = {};
         this.log = log;
 
         Client.on('light-offline', function(bulb) {
+            if (!useAllSerials && !serialNumbers.includes(bulb.id)) return;
+
             var uuid = UUIDGen.generate(bulb.id);
             var object = this.accessories[uuid];
 
@@ -84,6 +91,8 @@ class LifxLanPlatform {
         }.bind(this));
 
         Client.on('light-online', function(bulb) {
+            if (!useAllSerials && !serialNumbers.includes(bulb.id)) return;
+
             var uuid = UUIDGen.generate(bulb.id);
             var object = this.accessories[uuid];
 
@@ -99,6 +108,8 @@ class LifxLanPlatform {
         }.bind(this));
 
         Client.on('light-new', function(bulb) {
+            if (!useAllSerials && !serialNumbers.includes(bulb.id)) return;
+
             var uuid = UUIDGen.generate(bulb.id);
             var accessory = this.accessories[uuid];
 
